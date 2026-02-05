@@ -13,7 +13,8 @@ import {
   Eye,
   AlertCircle,
   Menu,
-  X
+  X,
+  ShoppingBag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -103,8 +104,11 @@ const AdminDashboard = () => {
           }`}
         >
           <div className="p-6 border-b border-border">
-            <h1 className="font-display text-xl font-bold">Hafsa's</h1>
-            <p className="text-sm text-muted-foreground">Admin Dashboard</p>
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-6 h-6 text-primary" />
+              <h1 className="font-display text-xl font-bold">Hafsa's</h1>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">Admin Dashboard</p>
           </div>
 
           <nav className="p-4 space-y-1">

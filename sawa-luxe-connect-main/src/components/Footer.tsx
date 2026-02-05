@@ -113,7 +113,7 @@ const Footer = () => {
       <div className="border-t border-ivory/10">
         <div className="container py-4 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-ivory/40">
           <p>© 2025 Hafsa's Boutique. All rights reserved.</p>
-          <p>Crafted with ❤️ in Eastleigh, Nairobi</p>
+          <p>Crafted with ❤️ by ZAK</p>
         </div>
       </div>
     </footer>
