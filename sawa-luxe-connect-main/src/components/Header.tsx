@@ -37,10 +37,10 @@ const Header = () => {
           {/* Logo */}
           <a href="/" className="flex flex-col">
             <span className="font-display text-2xl md:text-3xl font-bold text-foreground">
-              Hafsa's
+              UDGON
             </span>
             <span className="text-xs font-accent tracking-[0.2em] text-muted-foreground uppercase">
-              Luxury Boutique
+              JEWELLARY
             </span>
           </a>
 

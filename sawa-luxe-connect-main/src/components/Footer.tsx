@@ -19,18 +19,21 @@ const Footer = () => {
             <div className="flex gap-3">
               <a
                 href="#"
+                aria-label="Instagram"
                 className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-primary transition-colors"
               >
                 <Instagram className="w-5 h-5" />
               </a>
               <a
                 href="#"
+                aria-label="Facebook"
                 className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-primary transition-colors"
               >
                 <Facebook className="w-5 h-5" />
               </a>
               <a
                 href={`https://wa.me/${STORE_PHONE_PLAIN}`}
+                aria-label="WhatsApp"
                 className="w-10 h-10 rounded-full bg-whatsapp flex items-center justify-center hover:bg-whatsapp/90 transition-colors"
               >
                 <MessageCircle className="w-5 h-5" />
