@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { products } from '@/data/products';
+import uploadToCloudinary from '@/lib/cloudinary';
 import { Product, Category } from '@/types/product';
 import { fetchOrdersFromSheet } from '@/lib/googleSheets';
 
@@ -71,6 +72,88 @@ const AdminDashboard = () => {
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Local editable product list (in-memory)
+  const [productList, setProductList] = useState<Product[]>(products);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  const filteredList = productList.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Form state for Add / Edit
+  const [form, setForm] = useState({
+    id: '',
+    name: '',
+    description: '',
+    price: 0,
+    category: 'jewelry' as Category,
+    stock: 0,
+    featured: false,
+    imageUrl: '',
+  });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (editingProduct) {
+      setForm({
+        id: editingProduct.id,
+        name: editingProduct.name,
+        description: editingProduct.description || '',
+        price: editingProduct.price || 0,
+        category: editingProduct.category,
+        stock: editingProduct.stock || 0,
+        featured: !!editingProduct.featured,
+        imageUrl: editingProduct.images?.[0] || '',
+      });
+      setImageFile(null);
+    } else {
+      setForm({ id: '', name: '', description: '', price: 0, category: 'jewelry', stock: 0, featured: false, imageUrl: '' });
+      setImageFile(null);
+    }
+  }, [editingProduct, showAddModal]);
+
+  const handleChange = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
+
+  const handleSaveProduct = async () => {
+    try {
+      setSaving(true);
+      let imageUrl = form.imageUrl;
+      if (imageFile) {
+        const uploaded = await uploadToCloudinary(imageFile);
+        imageUrl = uploaded;
+      }
+
+      const newProduct: Product = {
+        id: form.id || `${form.name.replace(/\s+/g, '-').toUpperCase()}-${Date.now()}`,
+        name: form.name,
+        description: form.description,
+        price: Number(form.price),
+        category: form.category,
+        subcategory: '',
+        images: imageUrl ? [imageUrl] : [],
+        stock: Number(form.stock),
+        featured: form.featured,
+        tags: [],
+      };
+
+      if (editingProduct) {
+        setProductList((prev) => prev.map((p) => (p.id === editingProduct.id ? newProduct : p)));
+      } else {
+        setProductList((prev) => [newProduct, ...prev]);
+      }
+
+      setShowAddModal(false);
+    } catch (err: any) {
+      console.error('Save product failed', err);
+      alert('Failed to save product: ' + (err?.message || err));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Mock stats
   const stats = {
@@ -243,6 +326,72 @@ const AdminDashboard = () => {
             </motion.div>
           )}
 
+          {/* Add / Edit Product Modal */}
+          {showAddModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setShowAddModal(false)} />
+              <div className="relative w-full max-w-2xl bg-card border border-border rounded-xl p-6 z-10">
+                <h3 className="font-semibold text-lg mb-4">{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-muted-foreground mb-1">Name</label>
+                    <Input value={form.name} onChange={(e: any) => handleChange('name', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted-foreground mb-1">ID (optional)</label>
+                    <Input value={form.id} onChange={(e: any) => handleChange('id', e.target.value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm text-muted-foreground mb-1">Description</label>
+                    <Input value={form.description} onChange={(e: any) => handleChange('description', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted-foreground mb-1">Price (KES)</label>
+                    <Input type="number" value={String(form.price)} onChange={(e: any) => handleChange('price', Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted-foreground mb-1">Stock</label>
+                    <Input type="number" value={String(form.stock)} onChange={(e: any) => handleChange('stock', Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted-foreground mb-1">Category</label>
+                    <select className="w-full p-2 rounded-md border" value={form.category} onChange={(e) => handleChange('category', e.target.value)}>
+                      <option value="jewelry">Jewelry</option>
+                      <option value="bags">Bags</option>
+                      <option value="makeup">Makeup</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input id="featured" type="checkbox" checked={form.featured} onChange={(e) => handleChange('featured', e.target.checked)} />
+                    <label htmlFor="featured" className="text-sm text-muted-foreground">Featured</label>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm text-muted-foreground mb-1">Upload Image</label>
+                    <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                    <div className="my-2 text-xs text-muted-foreground">Or provide an image URL</div>
+                    <Input value={form.imageUrl} onChange={(e: any) => handleChange('imageUrl', e.target.value)} />
+                    {imageFile && (
+                      <div className="mt-2">
+                        <p className="text-xs text-muted-foreground">Selected file: {imageFile.name}</p>
+                      </div>
+                    )}
+                    {form.imageUrl && !imageFile && (
+                      <img src={form.imageUrl} alt="preview" className="mt-2 w-32 h-32 object-cover rounded-md" />
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 mt-6">
+                  <Button variant="ghost" onClick={() => setShowAddModal(false)}>Cancel</Button>
+                  <Button className="bg-primary text-primary-foreground" onClick={handleSaveProduct} disabled={saving}>
+                    {saving ? 'Saving...' : 'Save Product'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'products' && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -250,7 +399,7 @@ const AdminDashboard = () => {
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 className="font-display text-2xl font-bold">Products</h2>
-                <Button className="bg-primary text-primary-foreground">
+                <Button className="bg-primary text-primary-foreground" onClick={() => { setEditingProduct(null); setShowAddModal(true); }}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Product
                 </Button>
@@ -281,7 +430,7 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProducts.map((product) => (
+                      {filteredList.map((product) => (
                         <tr key={product.id} className="border-b border-border last:border-0">
                           <td className="p-4">
                             <div className="flex items-center gap-3">
@@ -309,10 +458,24 @@ const AdminDashboard = () => {
                           </td>
                           <td className="p-4">
                             <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => { setEditingProduct(product); setShowAddModal(true); }}
+                              >
                                 <Edit className="w-4 h-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  if (confirm(`Delete product "${product.name}"? This cannot be undone.`)) {
+                                    setProductList((prev) => prev.filter((p) => p.id !== product.id));
+                                  }
+                                }}
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
